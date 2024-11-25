@@ -13,7 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import NavBar from './NavBar';
 
-const AddRestaurant = ({ navigation }) => {
+const AddRestaurant = ({ navigation, route }) => {
   const [name, setName] = useState('');
   const [type, setType] = useState('');
   const [phone, setPhone] = useState('');
@@ -28,7 +28,8 @@ const AddRestaurant = ({ navigation }) => {
       return;
     }
 
-    console.log('New restaurant details:', {
+    // Prepare new restaurant data
+    const newRestaurant = {
       name,
       type,
       phone,
@@ -36,9 +37,14 @@ const AddRestaurant = ({ navigation }) => {
       description,
       rating,
       image,
-    });
+    };
 
-    // Navigate back or save the new restaurant to a list
+    // Call the passed addRestaurant function
+    if (route.params?.addRestaurant) {
+      route.params.addRestaurant(newRestaurant);
+    }
+
+    // Navigate back to HomeScreen
     navigation.goBack();
   };
 
