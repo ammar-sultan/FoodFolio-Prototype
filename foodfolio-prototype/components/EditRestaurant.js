@@ -14,7 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import NavBar from './NavBar';
 
 const EditRestaurant = ({ route, navigation }) => {
-  const { restaurant } = route.params;
+  const { restaurant, onUpdate } = route.params;
 
   const [name, setName] = useState(restaurant.name);
   const [type, setType] = useState(restaurant.type);
@@ -25,7 +25,8 @@ const EditRestaurant = ({ route, navigation }) => {
   const [image, setImage] = useState(restaurant.image);
 
   const handleSave = () => {
-    console.log('Updated restaurant details:', {
+    const updatedRestaurant = {
+      ...restaurant,
       name,
       type,
       phone,
@@ -33,8 +34,13 @@ const EditRestaurant = ({ route, navigation }) => {
       description,
       rating,
       image,
-    });
-    navigation.goBack();
+    };
+
+    if (onUpdate) {
+      onUpdate(updatedRestaurant); 
+    }
+
+    navigation.goBack(); 
   };
 
   const pickImage = async () => {

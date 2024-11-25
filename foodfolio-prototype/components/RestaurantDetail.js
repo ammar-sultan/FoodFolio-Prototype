@@ -11,19 +11,21 @@ import { MaterialIcons } from '@expo/vector-icons';
 import NavBar from './NavBar';
 
 const RestaurantDetail = ({ route, navigation }) => {
-  const { restaurant, onDelete } = route.params; // Receive restaurant and onDelete function from navigation
+  const { restaurant: initialRestaurant, onDelete } = route.params;
+  const [restaurant, setRestaurant] = useState(initialRestaurant); // Use state for restaurant
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(restaurant.id); // Call the onDelete callback passed from HomeScreen
+      onDelete(restaurant.id);
     }
     setDeleteModalVisible(false);
-    navigation.goBack(); // Navigate back to HomeScreen
+    navigation.goBack();
   };
 
   return (
     <View style={styles.container}>
+      {/* Render the restaurant details */}
       <View style={styles.header}>
         <View style={styles.iconContainer}>
           <Image source={require('../assets/logo.png')} style={styles.logo} />
@@ -39,9 +41,14 @@ const RestaurantDetail = ({ route, navigation }) => {
       </View>
 
       <View style={styles.detailContainer}>
+        {/* Render details */}
         <View style={styles.rowContainer}>
           <Image
-            source={require('../assets/restaurant.png')}
+            source={
+              restaurant.image
+                ? { uri: restaurant.image }
+                : require('../assets/restaurant.png')
+            }
             style={styles.restaurantImage}
           />
           <View style={styles.infoContainer}>
@@ -75,29 +82,33 @@ const RestaurantDetail = ({ route, navigation }) => {
 
         <View style={styles.ratingContainer}>
           <Text style={styles.infoLabel}>Rating:</Text>
-          <Text style={styles.ratingText}>⭐⭐⭐⭐☆</Text>
+          <Text style={styles.ratingText}>{restaurant.rating}</Text>
         </View>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.editButton]}
             onPress={() =>
-              navigation.navigate('EditRestaurant', { restaurant })
+              navigation.navigate('EditRestaurant', {
+                restaurant,
+                onUpdate: (updatedRestaurant) => {
+                  setRestaurant(updatedRestaurant); // Update state to trigger re-render
+                },
+              })
             }
           >
             <Text style={styles.buttonText}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.deleteButton]}
-            onPress={() => setDeleteModalVisible(true)} // Show confirmation modal
+            onPress={() => setDeleteModalVisible(true)}
           >
             <Text style={styles.buttonText}>Delete</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <NavBar />
-
+      {/* Delete confirmation modal */}
       <Modal
         visible={isDeleteModalVisible}
         transparent

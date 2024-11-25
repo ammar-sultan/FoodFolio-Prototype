@@ -23,7 +23,7 @@ const HomeScreen = () => {
       phone: '647-000-999',
       address: '366 Yonge St FL 1, Toronto, ON',
       description: 'Best Shawarma spot in Canada',
-      rating: '⭐⭐⭐⭐☆',
+      rating: '⭐⭐⭐⭐',
     },
     {
       id: 2,
@@ -69,7 +69,16 @@ const HomeScreen = () => {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('AddRestaurant')}
+          onPress={() =>
+            navigation.navigate('AddRestaurant', {
+              addRestaurant: (newRestaurant) => {
+                setRestaurants((prevRestaurants) => [
+                  ...prevRestaurants,
+                  { id: prevRestaurants.length + 1, ...newRestaurant },
+                ]);
+              },
+            })
+          }
         >
           <MaterialIcons name="add" size={24} color="#FFF" />
         </TouchableOpacity>
