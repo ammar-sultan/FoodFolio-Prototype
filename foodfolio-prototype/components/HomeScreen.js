@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,44 +7,60 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import NavBar from './NavBar';
+import { createTable, getRestaurants, deleteRestaurant } from '../database';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [restaurants, setRestaurants] = useState([
-    {
-      id: 1,
-      name: 'Shawarma Royale',
-      type: 'Middle Eastern',
-      phone: '647-000-999',
-      address: '366 Yonge St FL 1, Toronto, ON',
-      description: 'Best Shawarma spot in Canada',
-      rating: '⭐⭐⭐⭐',
-    },
-    {
-      id: 2,
-      name: 'Restaurant Name 2',
-      type: 'Cuisine Type 2',
-      phone: '123-456-789',
-      address: '123 Main St, Toronto, ON',
-      description: 'Another great restaurant.',
-      rating: '⭐⭐⭐☆☆',
-    },
-  ]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadRestaurants = async () => {
+    setLoading(true); // Start spinner
+    const fetchTimeout = new Promise((resolve) => setTimeout(resolve, 100));
+    const fetchRestaurants = getRestaurants(setRestaurants);
+    await Promise.all([fetchTimeout, fetchRestaurants]);
+    setLoading(false); // Stop spinner
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRestaurants();
+    }, [])
+  );
+
+  const handleDeleteRestaurant = async (id) => {
+    setLoading(true); // Start spinner
+    const deleteTimeout = new Promise((resolve) => setTimeout(resolve, 100));
+    const deleteOperation = deleteRestaurant(id);
+    await Promise.all([deleteTimeout, deleteOperation]);
+    await loadRestaurants();
+    setLoading(false); // Stop spinner
+  };
+
+  const renderStars = (rating) => {
+    const stars = [];
+    for (let i = 0; i < 5; i++) {
+      stars.push(
+        <MaterialIcons
+          key={i}
+          name={i < rating ? 'star' : 'star-border'}
+          size={16}
+          color="#FFD700"
+        />
+      );
+    }
+    return <View style={styles.starsContainer}>{stars}</View>;
+  };
 
   const filteredRestaurants = restaurants.filter((restaurant) =>
     restaurant.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleDeleteRestaurant = (restaurantId) => {
-    setRestaurants((prevRestaurants) =>
-      prevRestaurants.filter((restaurant) => restaurant.id !== restaurantId)
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -71,10 +87,10 @@ const HomeScreen = () => {
           style={styles.addButton}
           onPress={() =>
             navigation.navigate('AddRestaurant', {
-              addRestaurant: (newRestaurant) => {
+              onAdd: (newRestaurant) => {
                 setRestaurants((prevRestaurants) => [
                   ...prevRestaurants,
-                  { id: prevRestaurants.length + 1, ...newRestaurant },
+                  newRestaurant,
                 ]);
               },
             })
@@ -83,43 +99,61 @@ const HomeScreen = () => {
           <MaterialIcons name="add" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
-      <ScrollView style={styles.restaurantList}>
-        {filteredRestaurants.length > 0 ? (
-          filteredRestaurants.map((restaurant) => (
-            <View style={styles.restaurantCard} key={restaurant.id}>
-              <Image
-                source={require('../assets/restaurant.png')}
-                style={styles.restaurantImage}
-              />
-              <View style={styles.restaurantInfo}>
-                <Text style={styles.restaurantName}>{restaurant.name}</Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate('MapScreen', { restaurant })
+
+      {loading ? (
+        <View style={styles.spinnerContainer}>
+          <ActivityIndicator size="large" color="#FFB06C" />
+        </View>
+      ) : (
+        <ScrollView style={styles.restaurantList}>
+          {filteredRestaurants.length > 0 ? (
+            filteredRestaurants.map((restaurant) => (
+              <View style={styles.restaurantCard} key={restaurant.id}>
+                <Image
+                  source={
+                    restaurant.image
+                      ? { uri: restaurant.image }
+                      : require('../assets/restaurant.png')
                   }
-                >
-                  <Text style={styles.directionText}>Get direction</Text>
-                </TouchableOpacity>
-                <Text style={styles.rating}>{restaurant.rating}</Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate('RestaurantDetail', {
-                      restaurant,
-                      onDelete: handleDeleteRestaurant,
-                    })
-                  }
-                >
-                  <Text style={styles.detailsText}>See details</Text>
-                </TouchableOpacity>
+                  style={styles.restaurantImage}
+                />
+                <View style={styles.restaurantInfo}>
+                  <Text style={styles.restaurantName}>{restaurant.name}</Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('MapScreen', {
+                        restaurant: {
+                          name: restaurant.name,
+                          address: restaurant.address,
+                          latitude: restaurant.latitude,
+                          longitude: restaurant.longitude,
+                        },
+                      })
+                    }
+                  >
+                    <Text style={styles.directionText}>Get direction</Text>
+                  </TouchableOpacity>
+                  {renderStars(parseInt(restaurant.rating, 10))} {/* Display stars */}
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('RestaurantDetail', {
+                        restaurant,
+                        onDelete: () => handleDeleteRestaurant(restaurant.id),
+                      })
+                    }
+                  >
+                    <Text style={styles.detailsText}>See details</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
+            ))
+          ) : (
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>No restaurants found.</Text>
             </View>
-          ))
-        ) : (
-          <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>No restaurants found.</Text>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      )}
       <NavBar />
     </View>
   );
@@ -183,6 +217,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
+  spinnerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   restaurantList: {
     flex: 1,
     paddingHorizontal: 16,
@@ -201,6 +240,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 10,
   },
+  restaurantInfo: {
+    flex: 1,
+  },
   restaurantName: {
     fontSize: 14,
     color: '#FFF',
@@ -211,10 +253,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
   },
-  rating: {
-    color: '#FFD700',
+  starsContainer: {
+    flexDirection: 'row',
     marginTop: 4,
-    fontSize: 12,
   },
   detailsText: {
     color: '#AAA',
