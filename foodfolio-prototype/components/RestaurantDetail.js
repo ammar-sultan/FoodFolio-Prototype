@@ -6,13 +6,15 @@ import {
   Image,
   StyleSheet,
   Modal,
+  Share,
+  Linking,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import NavBar from './NavBar';
 
 const RestaurantDetail = ({ route, navigation }) => {
   const { restaurant: initialRestaurant, onDelete } = route.params;
-  const [restaurant, setRestaurant] = useState(initialRestaurant); // Use state for restaurant
+  const [restaurant, setRestaurant] = useState(initialRestaurant);
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const handleDelete = () => {
@@ -21,6 +23,67 @@ const RestaurantDetail = ({ route, navigation }) => {
     }
     setDeleteModalVisible(false);
     navigation.goBack();
+  };
+
+  const renderStars = (rating) => {
+    const stars = [];
+    for (let i = 0; i < 5; i++) {
+      stars.push(
+        <FontAwesome
+          key={i}
+          name={i < rating ? 'star' : 'star-o'}
+          size={20}
+          color="#FFD700"
+        />
+      );
+    }
+    return <View style={styles.starsContainer}>{stars}</View>;
+  };
+
+  const handleShare = async () => {
+    try {
+      const message = `
+        Check out this restaurant!
+        Name: ${restaurant.name}
+        Type: ${restaurant.type}
+        Address: ${restaurant.address}
+        Phone: ${restaurant.phone}
+        Description: ${restaurant.description}
+        Rating: ${restaurant.rating}/5
+      `;
+
+      const result = await Share.share({
+        message,
+        url: restaurant.image || '',
+        title: `Check out ${restaurant.name}`,
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          console.log('Shared with activity type:', result.activityType);
+        } else {
+          console.log('Shared successfully');
+        }
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      alert('Error sharing restaurant: ' + error.message);
+    }
+  };
+
+  const shareOnFacebook = () => {
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(restaurant.image || '')}&quote=${encodeURIComponent(
+      `Check out ${restaurant.name}: ${restaurant.description}`
+    )}`;
+    Linking.openURL(fbUrl).catch((err) => console.error('Error opening Facebook:', err));
+  };
+
+  const shareOnTwitter = () => {
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      `Check out ${restaurant.name}: ${restaurant.description}`
+    )}&url=${encodeURIComponent(restaurant.image || '')}`;
+    Linking.openURL(twitterUrl).catch((err) => console.error('Error opening Twitter:', err));
   };
 
   return (
@@ -69,9 +132,6 @@ const RestaurantDetail = ({ route, navigation }) => {
 
         <View style={styles.addressContainer}>
           <Text style={styles.infoLabel}>Address:</Text>
-          <TouchableOpacity>
-            <Text style={styles.mapLink}>View map</Text>
-          </TouchableOpacity>
           <Text style={styles.addressText}>{restaurant.address}</Text>
         </View>
 
@@ -82,7 +142,7 @@ const RestaurantDetail = ({ route, navigation }) => {
 
         <View style={styles.ratingContainer}>
           <Text style={styles.infoLabel}>Rating:</Text>
-          <Text style={styles.ratingText}>{restaurant.rating}</Text>
+          {renderStars(parseInt(restaurant.rating, 10))}
         </View>
 
         <View style={styles.buttonContainer}>
@@ -104,6 +164,27 @@ const RestaurantDetail = ({ route, navigation }) => {
             onPress={() => setDeleteModalVisible(true)}
           >
             <Text style={styles.buttonText}>Delete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.shareButton]}
+            onPress={handleShare}
+          >
+            <Text style={styles.buttonText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.socialButtonContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.facebookButton]}
+            onPress={shareOnFacebook}
+          >
+            <Text style={styles.buttonText}>Share on Facebook</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.twitterButton]}
+            onPress={shareOnTwitter}
+          >
+            <Text style={styles.buttonText}>Share on Twitter</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -137,6 +218,7 @@ const RestaurantDetail = ({ route, navigation }) => {
           </View>
         </View>
       </Modal>
+      <NavBar />
     </View>
   );
 };
@@ -199,67 +281,61 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#443F54',
     borderRadius: 10,
-    padding: 16,
+    padding: 12,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#FFF',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   infoLabel: {
     fontWeight: 'bold',
     color: '#FFB06C',
   },
   addressContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
     backgroundColor: '#443F54',
-    borderRadius: 10,
-    padding: 16,
-  },
-  mapLink: {
-    color: '#FFD700',
-    textAlign: 'right',
-    fontSize: 12,
+    borderRadius: 8,
+    padding: 12,
   },
   addressText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#FFF',
   },
   descriptionContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
     backgroundColor: '#443F54',
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: 8,
+    padding: 12,
   },
   descriptionText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#FFF',
   },
   ratingContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
     backgroundColor: '#443F54',
-    borderRadius: 10,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
-  ratingText: {
-    fontSize: 14,
-    color: '#FFD700',
-    marginLeft: 8,
+  starsContainer: {
+    flexDirection: 'row',
+    marginTop: 6,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 2,
   },
   editButton: {
     backgroundColor: '#FFB06C',
@@ -267,8 +343,11 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: '#D9534F',
   },
+  shareButton: {
+    backgroundColor: '#5A9',
+  },
   buttonText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -280,15 +359,15 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#443F54',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 8,
+    padding: 16,
     width: '80%',
     alignItems: 'center',
   },
   modalText: {
     color: '#FFF',
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 14,
+    marginBottom: 16,
     textAlign: 'center',
   },
   modalButtonContainer: {
@@ -298,10 +377,10 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 6,
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 2,
   },
   cancelButton: {
     backgroundColor: '#6C757D',
@@ -312,7 +391,22 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#FFF',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
+  },
+  socialButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  facebookButton: {
+    flex: 1,
+    backgroundColor: '#3b5998',
+    marginHorizontal: 2,
+  },
+  twitterButton: {
+    flex: 1,
+    backgroundColor: '#1DA1F2',
+    marginHorizontal: 2,
   },
 });
 
