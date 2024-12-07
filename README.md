@@ -15,13 +15,13 @@ Welcome to **Personal Restaurant Guide**, a React Native application to track, r
 
 _Add screenshots of your application below._
 
-| Splash Screen                             | Home Screen                           | Add Restaurant                          |
-| ----------------------------------------- | ------------------------------------- | --------------------------------------- |
-| ![Splash](./screenshots/SplashScreen.png) | ![Home](./screenshots/HomeScreen.png) | ![Add](./screenshots/AddRestaurant.png) |
+| Splash Screen                                                 | Home Screen                                               | Add Restaurant                                              |
+| ------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| ![Splash](./foodfolio-prototype/screenshots/SplashScreen.png) | ![Home](./foodfolio-prototype/screenshots/HomeScreen.png) | ![Add](./foodfolio-prototype/screenshots/AddRestaurant.png) |
 
-| Details Screen                              | Map Screen                          | About Screen                            |
-| ------------------------------------------- | ----------------------------------- | --------------------------------------- |
-| ![Details](./screenshots/DetailsScreen.png) | ![Map](./screenshots/MapScreen.png) | ![About](./screenshots/AboutScreen.png) |
+| Details Screen                                                  | Map Screen                                              | About Screen                                                |
+| --------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------- |
+| ![Details](./foodfolio-prototype/screenshots/DetailsScreen.png) | ![Map](./foodfolio-prototype/screenshots/MapScreen.png) | ![About](./foodfolio-prototype/screenshots/AboutScreen.png) |
 
 ## How to Run the App
 
