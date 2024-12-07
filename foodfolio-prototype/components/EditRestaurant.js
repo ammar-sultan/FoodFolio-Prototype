@@ -5,26 +5,50 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
   Alert,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavBar from './NavBar';
+
+const STORAGE_KEY = 'restaurants';
+
+const updateRestaurantInStorage = async (updatedRestaurant) => {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEY);
+    const restaurants = data ? JSON.parse(data) : [];
+    const updatedList = restaurants.map((restaurant) =>
+      restaurant.id === updatedRestaurant.id ? updatedRestaurant : restaurant
+    );
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+  } catch (error) {
+    console.error('Error updating restaurant:', error);
+  }
+};
 
 const EditRestaurant = ({ route, navigation }) => {
   const { restaurant, onUpdate } = route.params;
 
-  const [name, setName] = useState(restaurant.name);
-  const [type, setType] = useState(restaurant.type);
-  const [phone, setPhone] = useState(restaurant.phone);
-  const [address, setAddress] = useState(restaurant.address);
-  const [description, setDescription] = useState(restaurant.description);
-  const [rating, setRating] = useState(restaurant.rating);
-  const [image, setImage] = useState(restaurant.image);
+  const [name, setName] = useState(restaurant.name || '');
+  const [type, setType] = useState(restaurant.type || '');
+  const [phone, setPhone] = useState(restaurant.phone || '');
+  const [address, setAddress] = useState(restaurant.address || '');
+  const [description, setDescription] = useState(restaurant.description || '');
+  const [rating, setRating] = useState(parseInt(restaurant.rating, 10) || 0);
+  const [image, setImage] = useState(restaurant.image || null);
 
-  const handleSave = () => {
+  const restaurantTypes = ['Italian', 'Chinese', 'Mediterranean', 'Mexican', 'Japanese', 'Other'];
+
+  const handleSave = async () => {
+    if (!name || !type || !phone || !address || !rating) {
+      Alert.alert('Error', 'All fields are required');
+      return;
+    }
+
     const updatedRestaurant = {
       ...restaurant,
       name,
@@ -32,15 +56,25 @@ const EditRestaurant = ({ route, navigation }) => {
       phone,
       address,
       description,
-      rating,
+      rating: rating.toString(),
       image,
     };
 
-    if (onUpdate) {
-      onUpdate(updatedRestaurant); 
-    }
+    try {
+      // Update AsyncStorage
+      await updateRestaurantInStorage(updatedRestaurant);
 
-    navigation.goBack(); 
+      // Call onUpdate callback to sync with HomeScreen
+      if (onUpdate) {
+        onUpdate(updatedRestaurant);
+      }
+
+      // Navigate back
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error saving restaurant:', error);
+      Alert.alert('Error', 'An error occurred while saving the restaurant.');
+    }
   };
 
   const pickImage = async () => {
@@ -52,10 +86,14 @@ const EditRestaurant = ({ route, navigation }) => {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0].uri); // Update image URI state
     } else {
       Alert.alert('No image selected');
     }
+  };
+
+  const handleStarPress = (index) => {
+    setRating(index + 1);
   };
 
   return (
@@ -93,11 +131,16 @@ const EditRestaurant = ({ route, navigation }) => {
             <Text style={styles.infoText}>
               <Text style={styles.infoLabel}>Restaurant Type: </Text>
             </Text>
-            <TextInput
-              value={type}
-              onChangeText={setType}
-              style={styles.input}
-            />
+            <Picker
+              selectedValue={type}
+              onValueChange={(itemValue) => setType(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select a type" value="" />
+              {restaurantTypes.map((type, index) => (
+                <Picker.Item label={type} value={type} key={index} />
+              ))}
+            </Picker>
             <Text style={styles.infoText}>
               <Text style={styles.infoLabel}>Phone Number: </Text>
             </Text>
@@ -129,15 +172,26 @@ const EditRestaurant = ({ route, navigation }) => {
         </View>
         <View style={styles.ratingContainer}>
           <Text style={styles.infoLabel}>Rating:</Text>
-          <TextInput
-            value={rating}
-            onChangeText={setRating}
-            keyboardType="number-pad"
-            style={styles.input}
-          />
+          <View style={styles.starsContainer}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => handleStarPress(index)}
+              >
+                <FontAwesome
+                  name={index < rating ? 'star' : 'star-o'}
+                  size={24}
+                  color="#FFD700"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
+          <TouchableOpacity
+            style={[styles.button, styles.saveButton]}
+            onPress={handleSave}
+          >
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
         </View>
@@ -234,6 +288,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
   },
+  starsContainer: {
+    flexDirection: 'row',
+    marginVertical: 8,
+  },
   buttonContainer: {
     marginTop: 10,
   },
@@ -259,6 +317,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     height: 30,
     marginBottom: 6,
+  },
+  picker: {
+    backgroundColor: '#343148',
+    borderRadius: 8,
+    color: '#FFF',
+    marginBottom: 6,
+    height: 30,
   },
 });
 
