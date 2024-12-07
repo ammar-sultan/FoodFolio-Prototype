@@ -7,11 +7,13 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Alert,
+  Modal,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
 import NavBar from './NavBar';
+import { addRestaurant } from '../database';
 
 const AddRestaurant = ({ navigation, route }) => {
   const [name, setName] = useState('');
@@ -19,16 +21,36 @@ const AddRestaurant = ({ navigation, route }) => {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
-  const [rating, setRating] = useState('');
+  const [rating, setRating] = useState(0);
   const [image, setImage] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
-  const handleSave = () => {
-    if (!name || !type || !phone || !address || !rating) {
-      Alert.alert('Error', 'All fields are required');
+  const restaurantTypes = ['Italian', 'Chinese', 'Mediterranean', 'Mexican', 'Japanese', 'Other'];
+
+const handleSave = async () => {
+  if (!name || !type || !phone || !address || !rating) {
+    setModalMessage('All fields are required');
+    setModalVisible(true);
+    return;
+  }
+
+  try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          address
+        )}&key=_NOT_PUTTING_API_HERE_DUE_TO_GITHUB_POLICY`
+      );
+    const data = await response.json();
+
+    if (data.status !== 'OK') {
+      setModalMessage('Failed to fetch location. Please check the address.');
+      setModalVisible(true);
       return;
     }
 
-    // Prepare new restaurant data
+    const { lat, lng } = data.results[0].geometry.location;
+
     const newRestaurant = {
       name,
       type,
@@ -37,16 +59,23 @@ const AddRestaurant = ({ navigation, route }) => {
       description,
       rating,
       image,
+      latitude: lat,
+      longitude: lng,
     };
 
-    // Call the passed addRestaurant function
-    if (route.params?.addRestaurant) {
-      route.params.addRestaurant(newRestaurant);
+    addRestaurant(newRestaurant);
+
+    if (route.params?.onAdd) {
+      route.params.onAdd(newRestaurant);
     }
 
-    // Navigate back to HomeScreen
     navigation.goBack();
-  };
+  } catch (error) {
+    setModalMessage('An error occurred while fetching the location.');
+    setModalVisible(true);
+  }
+};
+
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -59,12 +88,38 @@ const AddRestaurant = ({ navigation, route }) => {
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     } else {
-      Alert.alert('No image selected');
+      setModalMessage('No image selected');
+      setModalVisible(true);
     }
+  };
+
+  const handleStarPress = (index) => {
+    setRating(index + 1);
   };
 
   return (
     <View style={styles.container}>
+      {/* Modal Alert */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalText}>{modalMessage}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Main Content */}
       <View style={styles.header}>
         <View style={styles.iconContainer}>
           <Image source={require('../assets/logo.png')} style={styles.logo} />
@@ -100,11 +155,16 @@ const AddRestaurant = ({ navigation, route }) => {
             <Text style={styles.infoText}>
               <Text style={styles.infoLabel}>Restaurant Type: </Text>
             </Text>
-            <TextInput
-              value={type}
-              onChangeText={setType}
-              style={styles.input}
-            />
+            <Picker
+              selectedValue={type}
+              onValueChange={(itemValue) => setType(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select a type" value="" />
+              {restaurantTypes.map((type, index) => (
+                <Picker.Item label={type} value={type} key={index} />
+              ))}
+            </Picker>
             <Text style={styles.infoText}>
               <Text style={styles.infoLabel}>Phone Number: </Text>
             </Text>
@@ -136,12 +196,20 @@ const AddRestaurant = ({ navigation, route }) => {
         </View>
         <View style={styles.ratingContainer}>
           <Text style={styles.infoLabel}>Rating:</Text>
-          <TextInput
-            value={rating}
-            onChangeText={setRating}
-            keyboardType="number-pad"
-            style={styles.input}
-          />
+          <View style={styles.starsContainer}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => handleStarPress(index)}
+              >
+                <FontAwesome
+                  name={index < rating ? 'star' : 'star-o'}
+                  size={24}
+                  color="#FFB06C"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
@@ -170,7 +238,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#ffb06c',
+    backgroundColor: '#FFB06C',
     marginRight: 16,
   },
   logo: {
@@ -211,6 +279,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  restaurantImage: {
+    width: 80,
+    height: 180,
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
   infoContainer: {
     flex: 1,
     backgroundColor: '#443F54',
@@ -244,6 +318,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
   },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginVertical: 8,
+  },
   buttonContainer: {
     marginTop: 10,
   },
@@ -270,6 +349,43 @@ const styles = StyleSheet.create({
     height: 30,
     marginBottom: 6,
   },
+  picker: {
+    backgroundColor: '#343148',
+    borderRadius: 8,
+    color: '#FFF',
+    marginBottom: 6,
+    height: 30,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    backgroundColor: '#443F54',
+    padding: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '80%',
+  },
+  modalText: {
+    color: '#FFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: '#FFB06C',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
 });
 
-export default AddRestaurant;
+export default AddRestaurant
