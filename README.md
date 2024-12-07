@@ -13,8 +13,6 @@ Welcome to **Personal Restaurant Guide**, a React Native application to track, r
 
 ## Screenshots
 
-_Add screenshots of your application below._
-
 | Splash Screen                                                 | Home Screen                                               | Add Restaurant                                              |
 | ------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
 | ![Splash](./foodfolio-prototype/screenshots/SplashScreen.png) | ![Home](./foodfolio-prototype/screenshots/HomeScreen.png) | ![Add](./foodfolio-prototype/screenshots/AddRestaurant.png) |
